@@ -14,36 +14,44 @@ NVE_14 <- read_csv("Data/QUANTOM_1000X_sn6221_Table15min.dat", skip =1) %>% filt
          OptodeTempOut = as.numeric(OptodeTempOut),
          BarometerPressOut = as.numeric(BarometerPressOut),
          PAR_Den_Out_Avg = as.numeric(PAR_Den_Out_Avg),
-         CdomRawVoltOut = as.numeric(CdomRawVoltOut),
-         CdomVoltOut = as.numeric(CdomVoltOut),
-         CdomCalcConOut = as.numeric(CdomCalcConOut)) %>%
-  select(-c(RECORD, BarometerPressOut, Batt_volt_Min)) %>%
+         CdomCalcConOut = as.numeric(CdomCalcConOut),
+         BarometerPressOut = as.numeric(BarometerPressOut),
+         Batt_volt_Min = as.numeric(Batt_volt_Min)) %>%
+  select(-c(RECORD, CdomRawVoltOut, CdomVoltOut)) %>%
   pivot_longer(cols= -c(TIMESTAMP), names_to = "Variable", values_to = "Measurement")
 
+NVE_14$Variable <- factor(NVE_14$Variable,
+                                  levels = c("PTemp", "OptodeSatOut", "OptodeConOut", "OptodeTempOut",
+                                             "PAR_Den_Out_Avg", "CdomCalcConOut", "pCO2_out", "BarometerPressOut", "Batt_volt_Min"),
+                                  labels = c(expression("Air temperature"),
+                                             expression("Oxygen saturation"),
+                                             expression("Oxygen concentration"),
+                                             expression("Water temperature"),
+                                             expression("PAR Density"),
+                                             expression("CDOM"),
+                                             expression("pCO2"),
+                                             expression("Air pressure"),
+                                             expression("Battery voltage")))
+
 # shiny app where user can chose the variable and time period
+
 # ui.R ----
-
-# You have to Adequate your data: You have to create a dete variable
-# in order to make the `dateRangeInput` work. You can do that using
-# `year`, `month` and `day` variables as follow.
-
-ui <- navbarPage(
-  title = "Quantom live",
-  tabPanel(
-    title = "St_14 sensor",
+ui <- fluidPage(
+  titlePanel("Quantom Live"),
+  sidebarLayout(
     sidebarPanel(
-      h4("Water chemistry"),
+      h4("Station 14 River Sensor"),
       # duplicates
       selectInput(
-        "Variable",
-        label = "Select Variable",
+        inputId = "Variable",
+        label = "Select variable",
         choices = unique(NVE_14$Variable),
-        selected = 'CdomRawVoltOut' # It is a good idea to select a value
+        selected = 'Water temperature' # It is a good idea to select a value
         # visible when you launch the app
       ),
       dateRangeInput(
         "dates",
-        label = "Time_period",
+        label = "Time period",
         start = min(NVE_14$TIMESTAMP),
         end = max(NVE_14$TIMESTAMP)
       ),
@@ -58,20 +66,43 @@ ui <- navbarPage(
 
 )
 
+# server.R ----
 server <- function(input, output, session) {
   output$plot <- renderPlot({
+
+  y_label <- reactive({
+      req(input$Variable)
+      if(input$Variable == "Air temperature"){
+        y_label <- expression("Air temperature ("~ "C)")
+      } else if(input$Variable == "Oxygen saturation"){
+        y_label <- expression("Oxygen saturation"~"(%)")
+      } else if(input$Variable == "Oxygen concentration"){
+        y_label <- expression("Oxygen concentration"~"(µM)")
+      } else if(input$Variable == "Water temperature"){
+        y_label <-  expression("Water temperature"~("C"))
+      } else if(input$Variable == "PAR Density"){
+        y_label <- expression("PAR Density"~"(µmol"~s^-1~m2^-1~")")
+      } else if(input$Variable == "CDOM"){
+        y_label <- bquote('CDOM'~"(ppb QSU)")
+      } else if(input$Variable == "pCO2"){
+        y_label <- bquote('pCO2'~"(ppm)")
+      } else if(input$Variable == "Air pressure"){
+        y_label <- expression("Barometeric pressure"~"(mbar)")
+      } else if(input$Variable == "Battery voltage"){
+        y_label <- expression("Battery voltage"~"(V)")
+      }})
+
+
     NVE_14 %>%
-      # Use your inputs to filter the data
-      filter(TIMESTAMP >= input$dates[1], TIMESTAMP <= input$dates[2], Variable == input$Variable) %>%
+      filter(TIMESTAMP >= input$dates[1], TIMESTAMP <= input$dates[2], Variable == input$Variable) %>%  # Use inputs to filter the data
       ggplot(aes(x = TIMESTAMP, y = Measurement)) +
       geom_point(size=0.6) + theme_classic() + xlab(NULL) +
-      theme(axis.text = element_text(size =12))
+      theme(text = element_text(size = 16)) +
+      labs(x = "Date", y = y_label())
 
   })
 
 }
 
-
 # Run the app ----
 shinyApp(ui = ui, server = server)
-
