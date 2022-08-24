@@ -30,7 +30,7 @@ NVE_14 <- read_csv("Data/QUANTOM_1000X_sn6221_Table15min.dat", skip =1) %>% filt
 ui <- navbarPage(
   title = "Quantom live",
   tabPanel(
-    title = "NVE_14 sensor",
+    title = "St_14 sensor",
     sidebarPanel(
       h4("Water chemistry"),
       # duplicates
@@ -74,3 +74,4 @@ server <- function(input, output, session) {
 
 # Run the app ----
 shinyApp(ui = ui, server = server)
+
