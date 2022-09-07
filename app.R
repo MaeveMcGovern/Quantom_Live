@@ -1,9 +1,18 @@
+
+# Shiny app for automatically downloading (weekly) data from the Quantom Cærrogæsjokka sensor
+# (at the NVE station on Finnmarkvidda)
+
+
 # Packages ----
 library(shiny)
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(lubridate)
+
+# Load from satellite through API
+# Add automated weekly updates
+# Add hydrology and climate data from NVE station through API--add updates accordingly
 
 # Loading data ----
 NVE_14 <- read_csv("Data/QUANTOM_1000X_sn6221_Table15min.dat", skip =1) %>% filter(!row_number() %in% c(1L, 2L)) %>%
@@ -18,7 +27,9 @@ NVE_14 <- read_csv("Data/QUANTOM_1000X_sn6221_Table15min.dat", skip =1) %>% filt
          BarometerPressOut = as.numeric(BarometerPressOut),
          Batt_volt_Min = as.numeric(Batt_volt_Min)) %>%
   select(-c(RECORD, CdomRawVoltOut, CdomVoltOut)) %>%
-  pivot_longer(cols= -c(TIMESTAMP), names_to = "Variable", values_to = "Measurement")
+  pivot_longer(cols= -c(TIMESTAMP), names_to = "Variable", values_to = "Measurement") %>%
+  filter(between(Measurement, mean(Measurement, na.rm=TRUE) - (90 * sd(Measurement, na.rm=TRUE)),
+                 mean(Measurement, na.rm=TRUE) + (90* sd(Measurement, na.rm=TRUE))))
 
 NVE_14$Variable <- factor(NVE_14$Variable,
                                   levels = c("PTemp", "OptodeSatOut", "OptodeConOut", "OptodeTempOut",
@@ -40,7 +51,7 @@ ui <- fluidPage(
   titlePanel("Quantom Live"),
   sidebarLayout(
     sidebarPanel(
-      h4("Station 14 River Sensor"),
+      h4("Cærrogæsjokka River Sensor"),
       # duplicates
       selectInput(
         inputId = "Variable",
